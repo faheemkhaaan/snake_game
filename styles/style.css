@@ -4,3 +4,7 @@
     box-sizing: border-box;
     overflow: hidden;
 }
+
+#myCanvas {
+    background-color: blanchedalmond;
+}
