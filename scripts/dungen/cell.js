@@ -9,15 +9,18 @@ class Cell {
     constructor(pos1, pos2) {
         this.leftSide = pos1;
         this.rightSide = pos2;
-
+        this.roomLeftSide = null;
+        this.roomRightSide = null;
+        this.roomWdith = null;
+        this.roomHeight = null;
         this.width = this.rightSide.x - this.leftSide.x;
         this.height = this.rightSide.y - this.leftSide.y;
         this.left = null;
         this.right = null;
     }
-    reCalculateDimension() {
-        this.width = this.rightSide.x - this.leftSide.x;
-        this.height = this.rightSide.y - this.leftSide.y;
+    calculateRoomDimension() {
+        this.roomWdith = this.roomRightSide.x - this.roomLeftSide.x;
+        this.roomHeight = this.roomRightSide.y - this.roomLeftSide.y;
     }
 
     divide(minimumSize) {
@@ -63,16 +66,20 @@ class Cell {
     }
 
     shrink(minimumSize) {
-        const scalerX = Math.max(minimumSize, Math.floor(this.width * 0.2 * Math.random()));
-        const scalerY = Math.max(minimumSize, Math.floor(this.height * 0.2 * Math.random()));
         // console.log(scalerX, scalerX)
         if (this.left) {
-            this.left.shrink();
-            this.right.shrink();
+            this.left.shrink(minimumSize);
+            this.right.shrink(minimumSize);
         } else {
-            this.leftSide = new Vector(this.leftSide.x + scalerX, this.leftSide.y + scalerY);
-            this.rightSide = new Vector(this.rightSide.x - scalerX, this.rightSide.y - scalerY);
-            this.reCalculateDimension()
+            const paddingX = Math.floor(this.width * 0.15);
+            const paddingY = Math.floor(this.height * 0.15);
+
+            this.roomLeftSide = new Vector(this.leftSide.x + paddingX, this.leftSide.y + paddingY);
+            this.roomRightSide = new Vector(this.rightSide.x - paddingX, this.rightSide.y - paddingY);
+            // console.log(scalerX, scalerY)
+            // this.roomLeftSide = new Vector(this.leftSide.x + scalerX, this.leftSide.y + scalerY);
+            // this.roomRightSide = new Vector(this.rightSide.x - scalerX, this.rightSide.y - scalerY);
+            this.calculateRoomDimension()
         }
 
     }
@@ -85,7 +92,11 @@ class Cell {
             this.right.draw(ctx);
         } else {
             ctx.beginPath();
-            ctx.strokeRect(this.leftSide.x, this.leftSide.y, this.width, this.height);
+            // ctx.strokeRect(this.leftSide.x, this.leftSide.y, this.width, this.height);
+            if (this.roomLeftSide && this.roomRightSide) {
+                ctx.strokeRect(this.roomLeftSide.x, this.roomLeftSide.y, this.roomWdith, this.roomHeight);
+
+            }
         }
     }
 }

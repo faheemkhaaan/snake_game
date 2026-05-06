@@ -4,7 +4,7 @@ const gridSize = 20 * scaler;
 class Dungen {
     constructor() {
 
-        this.minimumRooms = 3 * scaler;
+        this.minimumRooms = 2 * scaler;
         this.minimumSize = 2 * gridSize;
         this.root = new Cell(new Vector(0, 0), new Vector(width, height));
     }
@@ -12,10 +12,12 @@ class Dungen {
 
     divide() {
         let rooms = 0;
-        while (rooms < this.minimumRooms) {
+        let attempts = 0;
+        while (rooms < this.minimumRooms && attempts < 500) {
             if (this.root.divide(this.minimumSize)) {
                 rooms++
             }
+            attempts++
         }
         return this;
     }
