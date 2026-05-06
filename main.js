@@ -14,14 +14,15 @@ const snake = new Snake();
 const dungen = new Dungen();
 dungen
     .divide()
+    .getNeighbours()
     .shrink();
 ;
 console.log(dungen)
 
 function animate(time) {
     clearCanvas();
-    // snake.update();
-    // snake.draw(ctx);
+    snake.update();
+    snake.draw(ctx);
 
     dungen.draw(ctx);
 

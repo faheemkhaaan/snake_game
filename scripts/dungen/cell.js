@@ -17,10 +17,22 @@ class Cell {
         this.height = this.rightSide.y - this.leftSide.y;
         this.left = null;
         this.right = null;
+
+        this.hNeighbours = [];
+        this.vNeighbours = [];
     }
     calculateRoomDimension() {
         this.roomWdith = this.roomRightSide.x - this.roomLeftSide.x;
         this.roomHeight = this.roomRightSide.y - this.roomLeftSide.y;
+    }
+
+    getLeaves(cells) {
+        if (this.left) {
+            this.left.getLeaves(cells);
+            this.right.getLeaves(cells)
+        } else {
+            cells.push(this);
+        }
     }
 
     divide(minimumSize) {
