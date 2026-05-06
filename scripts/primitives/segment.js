@@ -44,7 +44,7 @@ class Segment {
         const v1 = Vector.sub(this.p1.pos, this.p2.pos);
         const v2 = Vector.sub(seg2.p2.pos, seg2.p1.pos); // Fixed: points from p2 to p3
 
-        const angle = Vector.calculateAngle(v1, v2);
+        const angle = Vector.angleBetween(v1, v2);
         const targetAngle = (targetAngleIndegrees * Math.PI) / 180;
 
         if (Math.abs(angle) < targetAngle) {

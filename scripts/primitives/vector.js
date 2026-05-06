@@ -27,11 +27,17 @@ class Vector {
         return new Vector(0, 0);
     }
 
-
+    angle() {
+        return Math.atan2(this.y, this.x)
+    }
     mult(factor) {
         this.x *= factor;
         this.y *= factor;
         return this;
+    }
+    divide(factor) {
+        if (factor === 0) return new Vector(0, 0);
+        return new Vector(this.x / factor, this.y / factor);
     }
     rotate(angle) {
         const cos = Math.cos(angle);
@@ -42,6 +48,7 @@ class Vector {
         this.y = newY;
         return this;
     }
+
 
     static normal(v) {
         return new Vector(v.y, -v.x).norm();
@@ -54,7 +61,9 @@ class Vector {
     }
 
     static angleBetween(v1, v2) {
+        // when we pass the cross product it acts like a sin theata and the dot_product acts like a cos theata.
         // Math.atan2(cross_product,dot_product)
+        // Math.atan2(sin0,cos0)
         return Math.atan2(Vector.cross(v1, v2), Vector.dot(v1, v2));
     }
 
@@ -78,6 +87,13 @@ class Vector {
     }
     static mult(v, factor) {
         return new Vector(v.x * factor, v.y * factor);
+    }
+    static divide(v, factor) {
+        if (factor === 0) return new Vector(0, 0);
+        return new Vector(v.x / factor, v.y / factor)
+    }
+    static lerp(a, b, t) {
+        return a + (b - a) * t
     }
 }
 

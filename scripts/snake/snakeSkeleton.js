@@ -8,10 +8,23 @@ class SnakeSkeleton {
         this.build(segmentCount, spacing)
     }
 
+
+
     build(segmentCount, spacing) {
-        // const radiuss = [14, 15, 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 13, 12, 11]
-        for (let i = 0; i < segmentCount; i++) {
-            this.points.push(new Point(new Vector(100 + (spacing * i), 100), 1));
+        const radiuss = [
+            12, 15, 16, 15, 13, // Head and Neck (slight taper at index 4)
+            14, 14, 14, 14, 14, // Front body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            13, 13, 12, 12, 11, // Beginning of taper
+            10, 9, 8, 7, 6,     // Tail narrowing
+            5, 4, 3, 2, 1.5,    // End of tail
+            1, 0.8, 0.5, 0.2    // Tip
+        ];
+        for (let i = 0; i < radiuss.length; i++) {
+            this.points.push(new Point(new Vector(100 + (spacing * i), 100), radiuss[i]));
         }
         for (let i = 0; i < this.points.length - 1; i++) {
             this.segments.push(new Segment(this.points[i], this.points[i + 1]));
@@ -29,7 +42,7 @@ class SnakeSkeleton {
         this.applyPhysics();
     }
     draw(ctx) {
-        this.points.forEach(p => p.draw(ctx));
+        this.points.forEach(p => p.draw(ctx, { fill: false }));
         this.segments.forEach(s => s.draw(ctx));
     }
 }

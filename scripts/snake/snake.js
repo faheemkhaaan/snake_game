@@ -14,12 +14,6 @@ class Snake {
     get head() {
         return this.skeleton.points[0];
     }
-
-    build() {
-
-    }
-
-
     update() {
         this.head.update(0, this.controls.keys);
         this.skeleton.update();
