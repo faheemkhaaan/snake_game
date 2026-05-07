@@ -10,21 +10,13 @@ const width = canvas.width = window.innerWidth;
 const height = canvas.height = window.innerHeight;
 
 
-const snake = new Snake();
-const dungen = new Dungen();
-dungen
-    .divide()
-    .getNeighbours()
-    .shrink();
-;
-console.log(dungen)
-
+const world = new World();
 function animate(time) {
     clearCanvas();
-    snake.update();
-    snake.draw(ctx);
 
-    dungen.draw(ctx);
+    world.update()
+    world.draw(ctx);
+
 
     requestAnimationFrame((time) => animate(time));
 }
@@ -34,12 +26,6 @@ function* animteGenerator() {
     while (true) {
         // clearCanvas();
 
-        if (rooms < dungen.minimumRooms) {
-
-            if (dungen.root.divide(dungen.minimumSize)) {
-                rooms++
-            }
-        }
 
 
         yield "Frame complete"
@@ -51,8 +37,6 @@ const simulation = animteGenerator();
 window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
         simulation.next();
-        dungen.draw(ctx);
-        console.log(dungen)
 
     } else if (e.code === "Tab") {
         animate()

@@ -7,23 +7,26 @@ class Cell {
      * @param {Vector} pos2
      */
     constructor(pos1, pos2) {
-        this.leftSide = pos1;
-        this.rightSide = pos2;
-        this.roomLeftSide = null;
-        this.roomRightSide = null;
+        this.topLeft = pos1;
+        this.bottomRight = pos2;
+        this.roomMin = null;
+        this.roomMax = null;
         this.roomWdith = null;
         this.roomHeight = null;
-        this.width = this.rightSide.x - this.leftSide.x;
-        this.height = this.rightSide.y - this.leftSide.y;
+        this.width = this.bottomRight.x - this.topLeft.x;
+        this.height = this.bottomRight.y - this.topLeft.y;
         this.left = null;
         this.right = null;
 
         this.hNeighbours = [];
         this.vNeighbours = [];
+
+        this.hHalls = [];
+        this.vHalls = [];
     }
     calculateRoomDimension() {
-        this.roomWdith = this.roomRightSide.x - this.roomLeftSide.x;
-        this.roomHeight = this.roomRightSide.y - this.roomLeftSide.y;
+        this.roomWdith = this.roomMax.x - this.roomMin.x;
+        this.roomHeight = this.roomMax.y - this.roomMin.y;
     }
 
     getLeaves(cells) {
@@ -57,10 +60,10 @@ class Cell {
             if (maxSplit <= minSplit) return false;
 
             const splitOffset = Vector.lerp(minSplit, maxSplit, Math.random())
-            const midx = this.leftSide.x + splitOffset;
-            // const midx = this.leftSide.x + Math.floor((Math.random() * 0.3 + 0.3) * this.width);
-            this.left = new Cell(new Vector(this.leftSide.x, this.leftSide.y), new Vector(midx, this.rightSide.y));
-            this.right = new Cell(new Vector(midx, this.leftSide.y), new Vector(this.rightSide.x, this.rightSide.y));
+            const midx = this.topLeft.x + splitOffset;
+            // const midx = this.topLeft.x + Math.floor((Math.random() * 0.3 + 0.3) * this.width);
+            this.left = new Cell(new Vector(this.topLeft.x, this.topLeft.y), new Vector(midx, this.bottomRight.y));
+            this.right = new Cell(new Vector(midx, this.topLeft.y), new Vector(this.bottomRight.x, this.bottomRight.y));
         } else {
             const minSplit = minimumSize;
             const maxSplit = this.height - minimumSize;
@@ -68,10 +71,10 @@ class Cell {
             if (maxSplit <= minSplit) return false;
 
             const splitOffset = Math.floor(Math.random() * (maxSplit - minSplit) + minSplit);
-            const midy = this.leftSide.y + splitOffset;
-            // const midy = this.leftSide.y + Math.floor((Math.random() * 0.3 + 0.3) * this.height);
-            this.left = new Cell(new Vector(this.leftSide.x, this.leftSide.y), new Vector(this.rightSide.x, midy));
-            this.right = new Cell(new Vector(this.leftSide.x, midy), new Vector(this.rightSide.x, this.rightSide.y));
+            const midy = this.topLeft.y + splitOffset;
+            // const midy = this.topLeft.y + Math.floor((Math.random() * 0.3 + 0.3) * this.height);
+            this.left = new Cell(new Vector(this.topLeft.x, this.topLeft.y), new Vector(this.bottomRight.x, midy));
+            this.right = new Cell(new Vector(this.topLeft.x, midy), new Vector(this.bottomRight.x, this.bottomRight.y));
         }
 
         return true;
@@ -86,11 +89,11 @@ class Cell {
             const paddingX = Math.floor(this.width * 0.15);
             const paddingY = Math.floor(this.height * 0.15);
 
-            this.roomLeftSide = new Vector(this.leftSide.x + paddingX, this.leftSide.y + paddingY);
-            this.roomRightSide = new Vector(this.rightSide.x - paddingX, this.rightSide.y - paddingY);
+            this.roomMin = new Vector(this.topLeft.x + paddingX, this.topLeft.y + paddingY);
+            this.roomMax = new Vector(this.bottomRight.x - paddingX, this.bottomRight.y - paddingY);
             // console.log(scalerX, scalerY)
-            // this.roomLeftSide = new Vector(this.leftSide.x + scalerX, this.leftSide.y + scalerY);
-            // this.roomRightSide = new Vector(this.rightSide.x - scalerX, this.rightSide.y - scalerY);
+            // this.roomtopLeft = new Vector(this.topLeft.x + scalerX, this.topLeft.y + scalerY);
+            // this.roombottomRight = new Vector(this.bottomRight.x - scalerX, this.bottomRight.y - scalerY);
             this.calculateRoomDimension()
         }
 
@@ -104,9 +107,12 @@ class Cell {
             this.right.draw(ctx);
         } else {
             ctx.beginPath();
-            // ctx.strokeRect(this.leftSide.x, this.leftSide.y, this.width, this.height);
-            if (this.roomLeftSide && this.roomRightSide) {
-                ctx.strokeRect(this.roomLeftSide.x, this.roomLeftSide.y, this.roomWdith, this.roomHeight);
+            // ctx.strokeRect(this.topLeft.x, this.topLeft.y, this.width, this.height);
+            if (this.roomMin && this.roomMax) {
+                this.vHalls.forEach(v => v.draw(ctx))
+                this.hHalls.forEach(h => h.draw(ctx))
+                ctx.fillStyle = "darkGrey"
+                ctx.fillRect(this.roomMin.x, this.roomMin.y, this.roomWdith, this.roomHeight);
 
             }
         }

@@ -14,10 +14,21 @@ class Snake {
     get head() {
         return this.skeleton.points[0];
     }
-    update() {
-        this.head.update(0, this.controls.keys);
+
+    spawn(pos) {
+        this.skeleton.points[0].pos = new Vector(pos.x, pos.y);
+
+        // We should also move all other segments to the same spot 
+        // so the snake doesn't start "stretched" across the map
+        for (let i = 1; i < this.skeleton.points.length; i++) {
+            this.skeleton.points[i].pos = new Vector(pos.x + (i * 10), pos.y + (i * 10));
+        }
+    }
+    update(cells) {
+
         this.skeleton.update();
         this.skin.update();
+        this.head.update(0, this.controls.keys, cells);
     }
 
     draw(ctx) {

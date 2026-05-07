@@ -49,6 +49,10 @@ class Vector {
         return this;
     }
 
+    distance() {
+
+    }
+
 
     static normal(v) {
         return new Vector(v.y, -v.x).norm();
