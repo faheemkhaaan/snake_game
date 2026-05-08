@@ -23,6 +23,9 @@ class Cell {
 
         this.hHalls = [];
         this.vHalls = [];
+
+        this.floorImage = document.createElement('img');
+        this.floorImage.src = '../../assets/floor.png';
     }
     calculateRoomDimension() {
         this.roomWdith = this.roomMax.x - this.roomMin.x;
@@ -112,8 +115,31 @@ class Cell {
                 this.vHalls.forEach(v => v.draw(ctx))
                 this.hHalls.forEach(h => h.draw(ctx))
                 ctx.fillStyle = "darkGrey"
-                ctx.fillRect(this.roomMin.x, this.roomMin.y, this.roomWdith, this.roomHeight);
+                // ctx.drawImage(this.floorImage, this.roomMin.x, this.roomMin.y, this.roomWdith, this.roomHeight);
 
+                // const textureScale = 1.0;
+                // const dx = this.roomMin.x;
+                // const dy = this.roomMin.y;
+                // const dWidth = this.roomWdith;
+                // const dHeight = this.roomHeight;
+
+                // // 3. Source (what part of the image to grab)
+                // // We use % (modulo) so the texture "wraps" or stays within image bounds
+                // const sx = (dx * textureScale) % this.floorImage.width;
+                // const sy = (dy * textureScale) % this.floorImage.height;
+                // const sWidth = dWidth * textureScale;
+                // const sHeight = dHeight * textureScale;
+
+                // // 4. Draw with 9 arguments
+                // ctx.drawImage(
+                //     this.floorImage,
+                //     sx, sy, sWidth, sHeight, // Source
+                //     dx, dy, dWidth, dHeight  // Destination
+                // );
+
+                const pattern = ctx.createPattern(this.floorImage, 'repeat');
+                ctx.fillStyle = pattern;
+                ctx.fillRect(this.roomMin.x, this.roomMin.y, this.roomWdith, this.roomHeight);
             }
         }
     }

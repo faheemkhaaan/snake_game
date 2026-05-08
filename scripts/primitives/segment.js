@@ -35,6 +35,7 @@ class Segment {
         const correction = Vector.mult(currentVector, difference);
         // this.p1.pos = Vector.sub(this.p1.pos, correction);
         this.p2.pos = Vector.add(this.p2.pos, correction);
+
         // console.log(Math.atan2(this.p1.pos.y, this.p2.pos.x) - Math.atan2(this.p2.pos.y, this.p2.pos.x))
     }
 
@@ -54,6 +55,12 @@ class Segment {
             v1.rotate(diff * 0.5);
             v2.rotate(-diff * 0.5);
 
+            const newP1 = Vector.add(this.p2.pos, v1);
+
+            // Only move p1 if it won't go through a wall
+            // if (!cells || this.p1.isCircleWalkable(newP1.x, newP1.y, cells)) {
+            //     this.p1.pos = newP1;
+            // }
             // 3. Set new positions by projecting outward from the joint
             this.p1.pos = Vector.add(this.p2.pos, v1);
             seg2.p2.pos = Vector.add(seg2.p1.pos, v2);

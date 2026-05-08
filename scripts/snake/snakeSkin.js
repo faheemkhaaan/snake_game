@@ -4,6 +4,7 @@ class SnakeSkin {
     constructor(segments, thickness = 15) {
         this.segments = segments;
         this.vertices = [];
+
         this.thickness = thickness;
         this.capResolution = 6;
         this.leftEye = null;
@@ -67,6 +68,7 @@ class SnakeSkin {
             ...tailCap,
             ...rightSide.reverse()
         ];
+        console.log(this.vertices.length)
     }
     /**
      * 

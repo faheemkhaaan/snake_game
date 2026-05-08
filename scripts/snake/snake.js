@@ -26,7 +26,7 @@ class Snake {
     }
     update(cells) {
 
-        this.skeleton.update();
+        this.skeleton.update(cells);
         this.skin.update();
         this.head.update(0, this.controls.keys, cells);
     }

@@ -1,38 +1,39 @@
-
-
-
 class Point {
     constructor(pos, rad) {
         this.pos = pos;
         this.velocity = new Vector(0, 0);
+        this.prevPos = new Vector(pos.x, pos.y);
 
-        this.acceleration = 2.2
-        this.friction = 0.95
-        this.max = 8;
+        this.acceleration = 2.2;
+        this.friction = 0.95;
+        this.max = 20;
         this.radius = rad;
-        this.gravity = Math.floor(Math.random() * 8 + 3)
+        this.gravity = Math.floor(Math.random() * 8 + 3);
 
-        // Cache for performance
-        this.collisionCache = new Map();
-        this.lastCellCheck = null;
-        this.cacheValidFrames = 0;
+        // Collision resolution settings
+        this.collisionSteps = 4;
+        this.circleCheckPoints = 12;
+
+        // Spatial hashing cache
+        this.spatialMap = null;
+        this.cellSize = 100;
+        this.lastMapUpdate = 0;
+        this.mapUpdateInterval = 120;
     }
 
-    setPos(pos) {
-        this.pos.x = pos.x;
-        this.pos.y = pos.y
-    }
-
-    // Build spatial hash map for faster lookups
-    buildSpatialMap(cells, cellSize = 100) {
+    /**
+     * Build spatial hash map for O(1) cell lookups
+     * @param {Cell[]} cells
+     */
+    buildSpatialMap(cells) {
         const spatialMap = new Map();
 
         cells.forEach(cell => {
-            // Add room to spatial map
-            const minCellX = Math.floor(cell.roomMin.x / cellSize);
-            const maxCellX = Math.floor(cell.roomMax.x / cellSize);
-            const minCellY = Math.floor(cell.roomMin.y / cellSize);
-            const maxCellY = Math.floor(cell.roomMax.y / cellSize);
+            // Hash room bounds
+            const minCellX = Math.floor(cell.roomMin.x / this.cellSize);
+            const maxCellX = Math.floor(cell.roomMax.x / this.cellSize);
+            const minCellY = Math.floor(cell.roomMin.y / this.cellSize);
+            const maxCellY = Math.floor(cell.roomMax.y / this.cellSize);
 
             for (let x = minCellX; x <= maxCellX; x++) {
                 for (let y = minCellY; y <= maxCellY; y++) {
@@ -43,23 +44,73 @@ class Point {
                     spatialMap.get(key).push(cell);
                 }
             }
+
+            // IMPORTANT: Also hash hall bounds so they're findable!
+            // Horizontal halls
+            if (cell.hHalls && cell.hHalls.length > 0) {
+                for (const hall of cell.hHalls) {
+                    const hallMinCellX = Math.floor(hall.hallMin.x / this.cellSize);
+                    const hallMaxCellX = Math.floor(hall.hallMax.x / this.cellSize);
+                    const hallMinCellY = Math.floor(hall.hallMin.y / this.cellSize);
+                    const hallMaxCellY = Math.floor(hall.hallMax.y / this.cellSize);
+
+                    for (let x = hallMinCellX; x <= hallMaxCellX; x++) {
+                        for (let y = hallMinCellY; y <= hallMaxCellY; y++) {
+                            const key = `${x},${y}`;
+                            if (!spatialMap.has(key)) {
+                                spatialMap.set(key, []);
+                            }
+                            // Only add if not already there (avoid duplicates)
+                            if (!spatialMap.get(key).includes(cell)) {
+                                spatialMap.get(key).push(cell);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Vertical halls
+            if (cell.vHalls && cell.vHalls.length > 0) {
+                for (const hall of cell.vHalls) {
+                    const hallMinCellX = Math.floor(hall.hallMin.x / this.cellSize);
+                    const hallMaxCellX = Math.floor(hall.hallMax.x / this.cellSize);
+                    const hallMinCellY = Math.floor(hall.hallMin.y / this.cellSize);
+                    const hallMaxCellY = Math.floor(hall.hallMax.y / this.cellSize);
+
+                    for (let x = hallMinCellX; x <= hallMaxCellX; x++) {
+                        for (let y = hallMinCellY; y <= hallMaxCellY; y++) {
+                            const key = `${x},${y}`;
+                            if (!spatialMap.has(key)) {
+                                spatialMap.set(key, []);
+                            }
+                            if (!spatialMap.get(key).includes(cell)) {
+                                spatialMap.get(key).push(cell);
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         return spatialMap;
     }
 
-    // Get potential cells using spatial hashing
-    getPotentialCells(x, y, spatialMap, cellSize = 100) {
-        const cellX = Math.floor(x / cellSize);
-        const cellY = Math.floor(y / cellSize);
+    /**
+     * Get nearby cells using spatial hash
+     */
+    getPotentialCells(x, y) {
+        if (!this.spatialMap) return [];
+
+        const cellX = Math.floor(x / this.cellSize);
+        const cellY = Math.floor(y / this.cellSize);
         const potentialCells = new Set();
 
-        // Check surrounding cells (3x3 grid)
+        // time complexity is O(k) where k = 9
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
                 const key = `${cellX + dx},${cellY + dy}`;
-                if (spatialMap.has(key)) {
-                    spatialMap.get(key).forEach(cell => potentialCells.add(cell));
+                if (this.spatialMap.has(key)) {
+                    this.spatialMap.get(key).forEach(cell => potentialCells.add(cell));
                 }
             }
         }
@@ -67,50 +118,44 @@ class Point {
         return Array.from(potentialCells);
     }
 
-    // Advanced walkability check with better boundary handling
-    isWalkable(x, y, cells, radius) {
-        const padding = radius * 0.8; // Slightly reduced padding for tighter corridors
-
-        // Check multiple points in a circular pattern
-        const checkPoints = [
-            { x: x, y: y },                    // Center
-            { x: x + padding, y: y },          // Right
-            { x: x - padding, y: y },          // Left
-            { x: x, y: y + padding },          // Bottom
-            { x: x, y: y - padding },          // Top
-            { x: x + padding * 0.7, y: y + padding * 0.7 },  // Top-right
-            { x: x - padding * 0.7, y: y + padding * 0.7 },  // Top-left
-            { x: x + padding * 0.7, y: y - padding * 0.7 },  // Bottom-right
-            { x: x - padding * 0.7, y: y - padding * 0.7 }   // Bottom-left
-        ];
-
-        // All points must be walkable
-        return checkPoints.every(point => this.checkDungeonOptimized(point.x, point.y, cells));
+    /**
+     * AABB point containment check
+     * Checks if point (x, y) is within a rectangle defined by min and max
+     */
+    isPointInAABB(x, y, min, max) {
+        return x >= min.x && x <= max.x && y >= min.y && y <= max.y;
     }
 
-    // Optimized dungeon check with early exit and AABB optimization
-    checkDungeonOptimized(x, y, cells) {
-        // Use cached spatial map if available
+    /**
+     * Check if a single point is in any walkable area (room or hall)
+     * FIX: This properly checks both rooms AND halls
+     */
+    isPointWalkable(x, y, cells) {
         const cellsToCheck = this.spatialMap ?
-            this.getPotentialCells(x, y, this.spatialMap) :
+            this.getPotentialCells(x, y) :
             cells;
 
         for (const cell of cellsToCheck) {
-            // Quick AABB check for room
+            // Check if point is in the room
             if (this.isPointInAABB(x, y, cell.roomMin, cell.roomMax)) {
                 return true;
             }
 
-            // Check halls with AABB optimization
-            for (const hall of cell.hHalls) {
-                if (this.isPointInAABB(x, y, hall.hallMin, hall.hallMax)) {
-                    return true;
+            // Check horizontal halls (if they exist and are not empty)
+            if (cell.hHalls && cell.hHalls.length > 0) {
+                for (const hall of cell.hHalls) {
+                    if (this.isPointInAABB(x, y, hall.hallMin, hall.hallMax)) {
+                        return true;
+                    }
                 }
             }
 
-            for (const hall of cell.vHalls) {
-                if (this.isPointInAABB(x, y, hall.hallMin, hall.hallMax)) {
-                    return true;
+            // Check vertical halls (if they exist and are not empty)
+            if (cell.vHalls && cell.vHalls.length > 0) {
+                for (const hall of cell.vHalls) {
+                    if (this.isPointInAABB(x, y, hall.hallMin, hall.hallMax)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -118,85 +163,164 @@ class Point {
         return false;
     }
 
-    // Fast AABB point intersection
-    isPointInAABB(x, y, min, max) {
-        return x >= min.x && x <= max.x && y >= min.y && y <= max.y;
-    }
+    /**
+     * Check if a circle at (x, y) with radius fits in walkable space
+     * Samples 12 points on the circle perimeter
+     */
+    isCircleWalkable(x, y, cells) {
+        // Check center point
+        if (!this.isPointWalkable(x, y, cells)) {
+            return false;
+        }
 
-    // Find nearest walkable point when collision occurs
-    findNearestWalkablePoint(x, y, cells, radius) {
-        const searchRadius = radius * 2;
-        const steps = 8;
-        let bestPoint = null;
-        let bestDistance = Infinity;
+        // Check perimeter points
+        const radius = this.radius;
+        for (let i = 0; i < this.circleCheckPoints; i++) {
+            const angle = (i / this.circleCheckPoints) * Math.PI * 2;
+            const px = x + radius * Math.cos(angle);
+            const py = y + radius * Math.sin(angle);
 
-        // Search in expanding circles
-        for (let r = radius; r <= searchRadius; r += radius / 2) {
-            for (let i = 0; i < steps; i++) {
-                const angle = (i / steps) * Math.PI * 2;
-                const testX = x + Math.cos(angle) * r;
-                const testY = y + Math.sin(angle) * r;
-
-                if (this.isWalkable(testX, testY, cells, radius)) {
-                    const distance = Math.hypot(testX - x, testY - y);
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestPoint = { x: testX, y: testY };
-                    }
-                }
+            if (!this.isPointWalkable(px, py, cells)) {
+                return false;
             }
         }
 
-        return bestPoint;
+        return true;
     }
 
-    // Improved collision resolution with sliding
-    resolveCollision(nextX, nextY, cells) {
-        const radius = this.radius;
+    /**
+     * Continuous Collision Detection with sampling
+     * Tests 5 points along the movement path
+     */
+    getCollisionFreePosition(nextX, nextY, cells) {
+        const steps = 5;
+        const prevX = this.prevPos.x;
+        const prevY = this.prevPos.y;
 
-        // Try full movement first
-        if (this.isWalkable(nextX, nextY, cells, radius)) {
-            return { x: nextX, y: nextY, collided: false };
+        // Test if final position is valid
+        if (this.isCircleWalkable(nextX, nextY, cells)) {
+            return { x: nextX, y: nextY, collision: false };
         }
 
-        // Try sliding along X axis
-        if (this.isWalkable(nextX, this.pos.y, cells, radius)) {
-            return { x: nextX, y: this.pos.y, collided: true, axis: 'x' };
+        // Sample backwards to find collision point
+        let lastValidX = prevX;
+        let lastValidY = prevY;
+        let lastValidT = 0;
+
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const testX = prevX + (nextX - prevX) * t;
+            const testY = prevY + (nextY - prevY) * t;
+
+            if (this.isCircleWalkable(testX, testY, cells)) {
+                lastValidX = testX;
+                lastValidY = testY;
+                lastValidT = t;
+            } else {
+                // Hit collision between last valid and current test point
+                return this.binarySearchCollision(
+                    prevX, prevY, testX, testY,
+                    lastValidX, lastValidY, cells
+                );
+            }
         }
 
-        // Try sliding along Y axis
-        if (this.isWalkable(this.pos.x, nextY, cells, radius)) {
-            return { x: this.pos.x, y: nextY, collided: true, axis: 'y' };
-        }
-
-        // Try diagonal sliding with reduced movement
-        const reducedX = this.pos.x + (nextX - this.pos.x) * 0.5;
-        const reducedY = this.pos.y + (nextY - this.pos.y) * 0.5;
-
-        if (this.isWalkable(reducedX, reducedY, cells, radius)) {
-            return { x: reducedX, y: reducedY, collided: true, axis: 'both' };
-        }
-
-        // Find nearest walkable point as last resort
-        const nearest = this.findNearestWalkablePoint(this.pos.x, this.pos.y, cells, radius);
-        if (nearest) {
-            return { x: nearest.x, y: nearest.y, collided: true, axis: 'nearest' };
-        }
-
-        // If all else fails, stay in place
-        return { x: this.pos.x, y: this.pos.y, collided: true, axis: 'none' };
+        // Last valid position is the furthest we can go
+        return {
+            x: lastValidX,
+            y: lastValidY,
+            collision: true
+        };
     }
 
-    // Main update with enhanced collision detection
+    /**
+     * Binary search to find exact collision boundary
+     * Recursively narrows down between valid and invalid positions
+     */
+    binarySearchCollision(prevX, prevY, invalidX, invalidY, validX, validY, cells, iterations = 0) {
+        if (iterations >= this.collisionSteps) {
+            return { x: validX, y: validY, collision: true };
+        }
+
+        const midX = (validX + invalidX) / 2;
+        const midY = (validY + invalidY) / 2;
+
+        if (this.isCircleWalkable(midX, midY, cells)) {
+            // Midpoint is valid, search further
+            return this.binarySearchCollision(
+                prevX, prevY, invalidX, invalidY, midX, midY, cells, iterations + 1
+            );
+        } else {
+            // Midpoint is invalid, search back
+            return this.binarySearchCollision(
+                prevX, prevY, midX, midY, validX, validY, cells, iterations + 1
+            );
+        }
+    }
+
+    /**
+     * Calculate slide velocity when hitting a wall
+     * Allows smooth wall sliding instead of stopping dead
+     */
+    getSlideVelocity(collisionX, collisionY, nextX, nextY) {
+        const dx = nextX - this.pos.x;
+        const dy = nextY - this.pos.y;
+        const actualDx = collisionX - this.pos.x;
+        const actualDy = collisionY - this.pos.y;
+
+        // Determine which axis was blocked more
+        const xBlockage = Math.abs(actualDx) / (Math.abs(dx) + 0.001);
+        const yBlockage = Math.abs(actualDy) / (Math.abs(dy) + 0.001);
+
+        const slideVelocity = new Vector(this.velocity.x, this.velocity.y);
+
+        // If X movement was blocked more, dampen X velocity (slide along Y)
+        if (xBlockage < yBlockage) {
+            slideVelocity.x *= 0.1;
+        } else {
+            slideVelocity.y *= 0.1;
+        }
+
+        return slideVelocity;
+    }
+    resolveWallPenetration(cells) {
+        if (this.isCircleWalkable(this.pos.x, this.pos.y, cells)) return;
+
+        // Try nudging in 8 directions to find nearest valid spot
+        const nudges = [
+            [1, 0], [-1, 0], [0, 1], [0, -1],
+            [1, 1], [-1, 1], [1, -1], [-1, -1]
+        ];
+
+        for (let dist = 1; dist <= this.radius * 2; dist += 1) {
+            for (const [nx, ny] of nudges) {
+                const tx = this.pos.x + nx * dist;
+                const ty = this.pos.y + ny * dist;
+                if (this.isCircleWalkable(tx, ty, cells)) {
+                    this.pos.x = tx;
+                    this.pos.y = ty;
+                    return;
+                }
+            }
+        }
+    }
+    /**
+     * Main physics update with collision detection
+     * Called once per frame
+     */
     update(delta, keys, cells) {
-        // Build spatial map periodically (every 60 frames)
-        if (!this.spatialMap || this.cacheValidFrames <= 0) {
+        // Update spatial map periodically
+        this.lastMapUpdate++;
+        if (!this.spatialMap || this.lastMapUpdate >= this.mapUpdateInterval) {
             this.spatialMap = this.buildSpatialMap(cells);
-            this.cacheValidFrames = 60;
+            this.lastMapUpdate = 0;
         }
-        this.cacheValidFrames--;
 
-        // Handle input
+        // Store previous position for CCD
+        this.prevPos.x = this.pos.x;
+        this.prevPos.y = this.pos.y;
+
+        // Apply input
         if (keys.ArrowUp) this.velocity.y -= this.acceleration;
         if (keys.ArrowDown) this.velocity.y += this.acceleration;
         if (keys.ArrowRight) this.velocity.x += this.acceleration;
@@ -205,75 +329,59 @@ class Point {
         // Apply friction
         this.velocity.mult(this.friction);
 
-        // Clamp velocity
+        // Clamp velocity to max speed
         const speed = this.velocity.mag();
         if (speed > this.max) {
             this.velocity = this.velocity.norm().mult(this.max);
         }
 
         // Calculate next position
+        // const nextX = this.pos.x + this.velocity.x;
+        // const nextY = this.pos.y + this.velocity.y;
+
+        // // Resolve collision
+        // const result = this.getCollisionFreePosition(nextX, nextY, cells);
+
+        // // Update position
+        // this.pos.x = result.x;
+        // this.pos.y = result.y;
+
+        // // Update velocity based on collision (smooth sliding)
+        // if (result.collision) {
+        //     this.velocity = this.getSlideVelocity(result.x, result.y, nextX, nextY);
+        // }
         const nextX = this.pos.x + this.velocity.x;
         const nextY = this.pos.y + this.velocity.y;
 
-        // Resolve collision
-        const result = this.resolveCollision(nextX, nextY, cells);
-
-        // Update position
-        this.pos.x = result.x;
-        this.pos.y = result.y;
-
-        // Handle velocity based on collision
-        if (result.collided) {
-            switch (result.axis) {
-                case 'x':
-                    this.velocity.y = 0;
-                    break;
-                case 'y':
-                    this.velocity.x = 0;
-                    break;
-                case 'both':
-                    this.velocity.mult(0.5);
-                    break;
-                case 'nearest':
-                case 'none':
-                    this.velocity.mult(0);
-                    break;
-            }
-        }
-    }
-
-    // Enhanced nearest cell finder with distance consideration
-    getNearestCell(x, y, cells) {
-        let nearestCell = null;
-        let minDistance = Infinity;
-
-        // Use spatial map for performance if available
-        const cellsToCheck = this.spatialMap ?
-            this.getPotentialCells(x, y, this.spatialMap) :
-            cells;
-
-        for (const cell of cellsToCheck) {
-            // Find closest point on room AABB to our position
-            const closestX = Math.max(cell.roomMin.x, Math.min(x, cell.roomMax.x));
-            const closestY = Math.max(cell.roomMin.y, Math.min(y, cell.roomMax.y));
-
-            const dx = x - closestX;
-            const dy = y - closestY;
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < minDistance) {
-                minDistance = distSq;
-                nearestCell = cell;
-            }
+        // Try full movement first
+        if (this.isCircleWalkable(nextX, nextY, cells)) {
+            this.pos.x = nextX;
+            this.pos.y = nextY;
+            return;
         }
 
-        return nearestCell;
+        // Try X axis only
+        const canMoveX = this.isCircleWalkable(nextX, this.pos.y, cells);
+        // Try Y axis only
+        const canMoveY = this.isCircleWalkable(this.pos.x, nextY, cells);
+
+        if (canMoveX) {
+            this.pos.x = nextX;
+            this.velocity.y = 0;  // kill only the blocked axis
+        } else if (canMoveY) {
+            this.pos.y = nextY;
+            this.velocity.x = 0;
+        } else {
+            // Truly cornered — kill all movement
+            this.velocity.x = 0;
+            this.velocity.y = 0;
+        }
     }
 
     draw(ctx, { fill = true, color = "black" } = {}) {
         ctx.beginPath();
-
         ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+
         if (fill) {
             ctx.fillStyle = color;
             ctx.fill();
@@ -282,270 +390,5 @@ class Point {
             ctx.stroke();
         }
     }
-
 }
 
-// // Enhanced collision detection for the Point class
-// class Point {
-//     constructor(pos, rad) {
-//         this.pos = pos;
-//         this.velocity = new Vector(0, 0);
-//         this.acceleration = 2.2;
-//         this.friction = 0.95;
-//         this.max = 8;
-//         this.radius = rad;
-//         this.gravity = Math.floor(Math.random() * 8 + 3);
-
-//         // Cache for performance
-//         this.collisionCache = new Map();
-//         this.lastCellCheck = null;
-//         this.cacheValidFrames = 0;
-//     }
-
-//     // Build spatial hash map for faster lookups
-//     buildSpatialMap(cells, cellSize = 100) {
-//         const spatialMap = new Map();
-
-//         cells.forEach(cell => {
-//             // Add room to spatial map
-//             const minCellX = Math.floor(cell.roomMin.x / cellSize);
-//             const maxCellX = Math.floor(cell.roomMax.x / cellSize);
-//             const minCellY = Math.floor(cell.roomMin.y / cellSize);
-//             const maxCellY = Math.floor(cell.roomMax.y / cellSize);
-
-//             for (let x = minCellX; x <= maxCellX; x++) {
-//                 for (let y = minCellY; y <= maxCellY; y++) {
-//                     const key = `${x},${y}`;
-//                     if (!spatialMap.has(key)) {
-//                         spatialMap.set(key, []);
-//                     }
-//                     spatialMap.get(key).push(cell);
-//                 }
-//             }
-//         });
-
-//         return spatialMap;
-//     }
-
-//     // Get potential cells using spatial hashing
-//     getPotentialCells(x, y, spatialMap, cellSize = 100) {
-//         const cellX = Math.floor(x / cellSize);
-//         const cellY = Math.floor(y / cellSize);
-//         const potentialCells = new Set();
-
-//         // Check surrounding cells (3x3 grid)
-//         for (let dx = -1; dx <= 1; dx++) {
-//             for (let dy = -1; dy <= 1; dy++) {
-//                 const key = `${cellX + dx},${cellY + dy}`;
-//                 if (spatialMap.has(key)) {
-//                     spatialMap.get(key).forEach(cell => potentialCells.add(cell));
-//                 }
-//             }
-//         }
-
-//         return Array.from(potentialCells);
-//     }
-
-//     // Advanced walkability check with better boundary handling
-//     isWalkable(x, y, cells, radius) {
-//         const padding = radius * 0.8; // Slightly reduced padding for tighter corridors
-
-//         // Check multiple points in a circular pattern
-//         const checkPoints = [
-//             { x: x, y: y },                    // Center
-//             { x: x + padding, y: y },          // Right
-//             { x: x - padding, y: y },          // Left
-//             { x: x, y: y + padding },          // Bottom
-//             { x: x, y: y - padding },          // Top
-//             { x: x + padding * 0.7, y: y + padding * 0.7 },  // Top-right
-//             { x: x - padding * 0.7, y: y + padding * 0.7 },  // Top-left
-//             { x: x + padding * 0.7, y: y - padding * 0.7 },  // Bottom-right
-//             { x: x - padding * 0.7, y: y - padding * 0.7 }   // Bottom-left
-//         ];
-
-//         // All points must be walkable
-//         return checkPoints.every(point => this.checkDungeonOptimized(point.x, point.y, cells));
-//     }
-
-//     // Optimized dungeon check with early exit and AABB optimization
-//     checkDungeonOptimized(x, y, cells) {
-//         // Use cached spatial map if available
-//         const cellsToCheck = this.spatialMap ?
-//             this.getPotentialCells(x, y, this.spatialMap) :
-//             cells;
-
-//         for (const cell of cellsToCheck) {
-//             // Quick AABB check for room
-//             if (this.isPointInAABB(x, y, cell.roomMin, cell.roomMax)) {
-//                 return true;
-//             }
-
-//             // Check halls with AABB optimization
-//             for (const hall of cell.hHalls) {
-//                 if (this.isPointInAABB(x, y, hall.hallMin, hall.hallMax)) {
-//                     return true;
-//                 }
-//             }
-
-//             for (const hall of cell.vHalls) {
-//                 if (this.isPointInAABB(x, y, hall.hallMin, hall.hallMax)) {
-//                     return true;
-//                 }
-//             }
-//         }
-
-//         return false;
-//     }
-
-//     // Fast AABB point intersection
-//     isPointInAABB(x, y, min, max) {
-//         return x >= min.x && x <= max.x && y >= min.y && y <= max.y;
-//     }
-
-//     // Find nearest walkable point when collision occurs
-//     findNearestWalkablePoint(x, y, cells, radius) {
-//         const searchRadius = radius * 2;
-//         const steps = 8;
-//         let bestPoint = null;
-//         let bestDistance = Infinity;
-
-//         // Search in expanding circles
-//         for (let r = radius; r <= searchRadius; r += radius / 2) {
-//             for (let i = 0; i < steps; i++) {
-//                 const angle = (i / steps) * Math.PI * 2;
-//                 const testX = x + Math.cos(angle) * r;
-//                 const testY = y + Math.sin(angle) * r;
-
-//                 if (this.isWalkable(testX, testY, cells, radius)) {
-//                     const distance = Math.hypot(testX - x, testY - y);
-//                     if (distance < bestDistance) {
-//                         bestDistance = distance;
-//                         bestPoint = { x: testX, y: testY };
-//                     }
-//                 }
-//             }
-//         }
-
-//         return bestPoint;
-//     }
-
-//     // Improved collision resolution with sliding
-//     resolveCollision(nextX, nextY, cells) {
-//         const radius = this.radius;
-
-//         // Try full movement first
-//         if (this.isWalkable(nextX, nextY, cells, radius)) {
-//             return { x: nextX, y: nextY, collided: false };
-//         }
-
-//         // Try sliding along X axis
-//         if (this.isWalkable(nextX, this.pos.y, cells, radius)) {
-//             return { x: nextX, y: this.pos.y, collided: true, axis: 'x' };
-//         }
-
-//         // Try sliding along Y axis
-//         if (this.isWalkable(this.pos.x, nextY, cells, radius)) {
-//             return { x: this.pos.x, y: nextY, collided: true, axis: 'y' };
-//         }
-
-//         // Try diagonal sliding with reduced movement
-//         const reducedX = this.pos.x + (nextX - this.pos.x) * 0.5;
-//         const reducedY = this.pos.y + (nextY - this.pos.y) * 0.5;
-
-//         if (this.isWalkable(reducedX, reducedY, cells, radius)) {
-//             return { x: reducedX, y: reducedY, collided: true, axis: 'both' };
-//         }
-
-//         // Find nearest walkable point as last resort
-//         const nearest = this.findNearestWalkablePoint(this.pos.x, this.pos.y, cells, radius);
-//         if (nearest) {
-//             return { x: nearest.x, y: nearest.y, collided: true, axis: 'nearest' };
-//         }
-
-//         // If all else fails, stay in place
-//         return { x: this.pos.x, y: this.pos.y, collided: true, axis: 'none' };
-//     }
-
-//     // Main update with enhanced collision detection
-//     update(delta, keys, cells) {
-//         // Build spatial map periodically (every 60 frames)
-//         if (!this.spatialMap || this.cacheValidFrames <= 0) {
-//             this.spatialMap = this.buildSpatialMap(cells);
-//             this.cacheValidFrames = 60;
-//         }
-//         this.cacheValidFrames--;
-
-//         // Handle input
-//         if (keys.ArrowUp) this.velocity.y -= this.acceleration;
-//         if (keys.ArrowDown) this.velocity.y += this.acceleration;
-//         if (keys.ArrowRight) this.velocity.x += this.acceleration;
-//         if (keys.ArrowLeft) this.velocity.x -= this.acceleration;
-
-//         // Apply friction
-//         this.velocity.mult(this.friction);
-
-//         // Clamp velocity
-//         const speed = this.velocity.mag();
-//         if (speed > this.max) {
-//             this.velocity = this.velocity.norm().mult(this.max);
-//         }
-
-//         // Calculate next position
-//         const nextX = this.pos.x + this.velocity.x;
-//         const nextY = this.pos.y + this.velocity.y;
-
-//         // Resolve collision
-//         const result = this.resolveCollision(nextX, nextY, cells);
-
-//         // Update position
-//         this.pos.x = result.x;
-//         this.pos.y = result.y;
-
-//         // Handle velocity based on collision
-//         if (result.collided) {
-//             switch (result.axis) {
-//                 case 'x':
-//                     this.velocity.y = 0;
-//                     break;
-//                 case 'y':
-//                     this.velocity.x = 0;
-//                     break;
-//                 case 'both':
-//                     this.velocity.mult(0.5);
-//                     break;
-//                 case 'nearest':
-//                 case 'none':
-//                     this.velocity.mult(0);
-//                     break;
-//             }
-//         }
-//     }
-
-//     // Enhanced nearest cell finder with distance consideration
-//     getNearestCell(x, y, cells) {
-//         let nearestCell = null;
-//         let minDistance = Infinity;
-
-//         // Use spatial map for performance if available
-//         const cellsToCheck = this.spatialMap ?
-//             this.getPotentialCells(x, y, this.spatialMap) :
-//             cells;
-
-//         for (const cell of cellsToCheck) {
-//             // Find closest point on room AABB to our position
-//             const closestX = Math.max(cell.roomMin.x, Math.min(x, cell.roomMax.x));
-//             const closestY = Math.max(cell.roomMin.y, Math.min(y, cell.roomMax.y));
-
-//             const dx = x - closestX;
-//             const dy = y - closestY;
-//             const distSq = dx * dx + dy * dy;
-
-//             if (distSq < minDistance) {
-//                 minDistance = distSq;
-//                 nearestCell = cell;
-//             }
-//         }
-
-//         return nearestCell;
-//     }
-// }
