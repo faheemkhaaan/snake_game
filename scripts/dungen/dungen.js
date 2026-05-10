@@ -131,7 +131,6 @@ class Dungen {
                 }
             }
         }
-        console.log(this.root)
         return this;
     }
 

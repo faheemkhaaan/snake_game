@@ -3,7 +3,7 @@
 class Camera {
     constructor() {
         this.pos = new Vector(0, 0);
-        this.lerpFactor = 0.1;
+        this.lerpFactor = 0.07;
         this.shakeIntensity = 2
     }
 

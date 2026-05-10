@@ -22,10 +22,11 @@ function animate(time) {
 }
 
 function* animteGenerator() {
-    let rooms = 0;
     while (true) {
         // clearCanvas();
 
+        world.update()
+        world.draw(ctx);
 
 
         yield "Frame complete"
@@ -43,5 +44,5 @@ window.addEventListener("keydown", (e) => {
     }
 })
 
-animate(0);
+// animate(0);
 

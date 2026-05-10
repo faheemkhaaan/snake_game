@@ -17,7 +17,7 @@ class Vector {
         return this;
     }
     mag() {
-        return Math.hypot(this.y, this.x);
+        return Math.hypot(this.x, this.y);
     }
     norm() {
         const mag = this.mag();
@@ -39,6 +39,12 @@ class Vector {
         if (factor === 0) return new Vector(0, 0);
         return new Vector(this.x / factor, this.y / factor);
     }
+    div(factor) {
+        if (factor === 0) return this;
+        this.x /= factor;
+        this.y /= factor;
+        return this;
+    }
     rotate(angle) {
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
@@ -49,10 +55,30 @@ class Vector {
         return this;
     }
 
+    copy() {
+        return new Vector(this.x, this.y);
+    }
+
     distance() {
 
     }
 
+    normalize() {
+        const mag = this.mag();
+        if (mag > 0) {
+            this.x /= mag;
+            this.x /= mag;
+            return this;
+        }
+        return this;
+    }
+
+    limit(factor) {
+        if (this.mag() > factor) {
+            return this.normalize().mult(factor);
+        }
+        return this;
+    }
 
     static normal(v) {
         return new Vector(v.y, -v.x).norm();

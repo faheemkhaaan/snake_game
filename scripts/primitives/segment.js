@@ -39,21 +39,29 @@ class Segment {
         // console.log(Math.atan2(this.p1.pos.y, this.p2.pos.x) - Math.atan2(this.p2.pos.y, this.p2.pos.x))
     }
 
-    angleAngleConstraint(seg2, targetAngleIndegrees) {
+    angleAngleConstraint(seg2, maxBendDegrees) {
         // 1. Calculate vectors radiating OUTWARD from the shared joint
         // Assuming this.p2 is the joint connecting to seg2.p1
-        const v1 = Vector.sub(this.p1.pos, this.p2.pos);
-        const v2 = Vector.sub(seg2.p2.pos, seg2.p1.pos); // Fixed: points from p2 to p3
+        const joint = this.p2.pos; // shared joint
+
+        const v1 = Vector.sub(this.p1.pos, joint);
+        const v2 = Vector.sub(seg2.p2.pos, joint); // Fixed: points from p2 to p3
 
         const angle = Vector.angleBetween(v1, v2);
-        const targetAngle = (targetAngleIndegrees * Math.PI) / 180;
+        // const targetAngle = (targetAngleIndegrees * Math.PI) / 180;
 
-        if (Math.abs(angle) < targetAngle) {
-            const diff = angle - (targetAngle * Math.sign(angle));
 
+        const v1flipped = Vector.mult(v1, -1); // now points forward like v2
+        const bendAngle = Vector.angleBetween(v1flipped, v2); // 0 when straight
+
+        const maxBend = (maxBendDegrees * Math.PI) / 180;
+
+        if (Math.abs(bendAngle) > maxBend) {
+            // const halfDiff = (Math.abs(bendAngle) - maxBend) * 0.5 * Math.sign(bendAngle);
+            const correction = (Math.abs(bendAngle) - maxBend) * 0.5 * Math.sign(bendAngle);
             // 2. Fixed: Swap rotation signs to pull them towards the target
-            v1.rotate(diff * 0.5);
-            v2.rotate(-diff * 0.5);
+            v1.rotate(correction);
+            v2.rotate(-correction);
 
             const newP1 = Vector.add(this.p2.pos, v1);
 
@@ -62,8 +70,8 @@ class Segment {
             //     this.p1.pos = newP1;
             // }
             // 3. Set new positions by projecting outward from the joint
-            this.p1.pos = Vector.add(this.p2.pos, v1);
-            seg2.p2.pos = Vector.add(seg2.p1.pos, v2);
+            this.p1.pos = Vector.add(joint, v1);
+            seg2.p2.pos = Vector.add(joint, v2);
         }
     }
     update() {

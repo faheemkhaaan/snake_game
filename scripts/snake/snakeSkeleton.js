@@ -18,6 +18,36 @@ class SnakeSkeleton {
             14, 14, 14, 14, 14, // Mid body
             14, 14, 14, 14, 14, // Mid body
             14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
+            14, 14, 14, 14, 14, // Mid body
             13, 13, 12, 12, 11, // Beginning of taper
             10, 9, 8, 7, 6,     // Tail narrowing
             5, 4, 3, 2, 1.5,    // End of tail
@@ -35,7 +65,7 @@ class SnakeSkeleton {
             this.segments.forEach(s => s.applyDistanceConstraint());
         }
         for (let i = 0; i < this.segments.length - 1; i++) {
-            this.segments[i].angleAngleConstraint(this.segments[i + 1], 145)
+            this.segments[i].angleAngleConstraint(this.segments[i + 1], 40)
         }
         if (cells) {
             this.points.forEach(p => p.resolveWallPenetration(cells));
