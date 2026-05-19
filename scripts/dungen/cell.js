@@ -25,7 +25,8 @@ class Cell {
         this.vHalls = [];
 
         this.floorImage = document.createElement('img');
-        this.floorImage.src = '../../assets/floor.png';
+        this.floorImage.src = '../../assets/tiles.jpeg';
+
     }
     calculateRoomDimension() {
         this.roomWdith = this.roomMax.x - this.roomMin.x;
@@ -139,6 +140,7 @@ class Cell {
 
                 const pattern = ctx.createPattern(this.floorImage, 'repeat');
                 ctx.fillStyle = pattern;
+
                 ctx.fillRect(this.roomMin.x, this.roomMin.y, this.roomWdith, this.roomHeight);
             }
         }

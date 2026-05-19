@@ -39,10 +39,10 @@ window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
         simulation.next();
 
-    } else if (e.code === "Tab") {
+    } else if (e.code === "KeyW") {
         animate()
     }
 })
 
-// animate(0);
+animate(0);
 

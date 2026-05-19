@@ -5,8 +5,13 @@ class Segment {
         this.p1 = p1;
         this.p2 = p2;
 
-        this.diff = Vector.sub(this.p1.pos, this.p2.pos);
-        this.length = this.diff.mag();
+        this.pos = Vector.sub(this.p1.pos, this.p2.pos);
+        console.log(this.pos)
+        this.prevPos = this.pos.clone()
+        this.velocity = new Vector(0, 0);
+        this.acceleration = 2;
+        this.friction = 0.98
+        this.length = this.pos.mag();
     }
 
     side(thickness) {
@@ -74,9 +79,29 @@ class Segment {
             seg2.p2.pos = Vector.add(joint, v2);
         }
     }
-    update() {
+    update(keys) {
+        this.prevPos.x = this.pos.x;
+        this.prevPos.y = this.pos.y;
 
+        // Apply input
+        if (keys.ArrowUp) this.velocity.y -= this.acceleration;
+        if (keys.ArrowDown) this.velocity.y += this.acceleration;
+        if (keys.ArrowRight) this.velocity.x += this.acceleration;
+        if (keys.ArrowLeft) this.velocity.x -= this.acceleration;
+
+        // Apply friction
+        this.velocity.mult(this.friction);
+
+        // Clamp velocity to max speed
+        const speed = this.velocity.mag();
+        if (speed > this.max) {
+            this.velocity = this.velocity.norm().mult(this.max);
+        }
+
+        this.pos.add(this.velocity);
         this.applyDistanceConstraint();
+
+
 
     }
 

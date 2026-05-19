@@ -5,6 +5,11 @@ class Vector {
         this.x = x;
         this.y = y;
     }
+    set(x, y) {
+        this.x = x;
+        this.y = y;
+        return this;
+    }
 
     add(other) {
         this.x += other.x;
@@ -57,6 +62,10 @@ class Vector {
 
     copy() {
         return new Vector(this.x, this.y);
+    }
+    clone() {
+        return new Vector(this.x, this.y);
+
     }
 
     distance() {

@@ -297,6 +297,7 @@ class Point {
                 const tx = this.pos.x + nx * dist;
                 const ty = this.pos.y + ny * dist;
                 if (this.isCircleWalkable(tx, ty, cells)) {
+                    // this.velocity.set(0, 0)
                     this.pos.x = tx;
                     this.pos.y = ty;
                     return;
@@ -311,10 +312,10 @@ class Point {
     update(delta, keys, cells) {
         // Update spatial map periodically
         this.lastMapUpdate++;
-        if (!this.spatialMap || this.lastMapUpdate >= this.mapUpdateInterval) {
-            this.spatialMap = this.buildSpatialMap(cells);
-            this.lastMapUpdate = 0;
-        }
+        // if (!this.spatialMap || this.lastMapUpdate >= this.mapUpdateInterval) {
+        //     this.spatialMap = this.buildSpatialMap(cells);
+        //     this.lastMapUpdate = 0;
+        // }
 
         // Store previous position for CCD
         this.prevPos.x = this.pos.x;
@@ -335,6 +336,7 @@ class Point {
             this.velocity = this.velocity.norm().mult(this.max);
         }
 
+        this.pos.add(this.velocity);
         // Calculate next position
         // const nextX = this.pos.x + this.velocity.x;
         // const nextY = this.pos.y + this.velocity.y;
@@ -350,32 +352,32 @@ class Point {
         // if (result.collision) {
         //     this.velocity = this.getSlideVelocity(result.x, result.y, nextX, nextY);
         // }
-        const nextX = this.pos.x + this.velocity.x;
-        const nextY = this.pos.y + this.velocity.y;
+        // const nextX = this.pos.x + this.velocity.x;
+        // const nextY = this.pos.y + this.velocity.y;
 
-        // Try full movement first
-        if (this.isCircleWalkable(nextX, nextY, cells)) {
-            this.pos.x = nextX;
-            this.pos.y = nextY;
-            return;
-        }
+        // // Try full movement first
+        // if (this.isCircleWalkable(nextX, nextY, cells)) {
+        //     this.pos.x = nextX;
+        //     this.pos.y = nextY;
+        //     return;
+        // }
 
-        // Try X axis only
-        const canMoveX = this.isCircleWalkable(nextX, this.pos.y, cells);
-        // Try Y axis only
-        const canMoveY = this.isCircleWalkable(this.pos.x, nextY, cells);
+        // // Try X axis only
+        // const canMoveX = this.isCircleWalkable(nextX, this.pos.y, cells);
+        // // Try Y axis only
+        // const canMoveY = this.isCircleWalkable(this.pos.x, nextY, cells);
 
-        if (canMoveX) {
-            this.pos.x = nextX;
-            this.velocity.y = 0;  // kill only the blocked axis
-        } else if (canMoveY) {
-            this.pos.y = nextY;
-            this.velocity.x = 0;
-        } else {
-            // Truly cornered — kill all movement
-            this.velocity.x = 0;
-            this.velocity.y = 0;
-        }
+        // if (canMoveX) {
+        //     this.pos.x = nextX;
+        //     this.velocity.y = 0;  // kill only the blocked axis
+        // } else if (canMoveY) {
+        //     this.pos.y = nextY;
+        //     this.velocity.x = 0;
+        // } else {
+        //     // Truly cornered — kill all movement
+        //     this.velocity.x = 0;
+        //     this.velocity.y = 0;
+        // }
     }
 
     draw(ctx, { fill = true, color = "black" } = {}) {

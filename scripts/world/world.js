@@ -37,8 +37,8 @@ class World {
     update() {
         this.snake.update(this.dungen.cells);
         this.camera.follow(this.snake.head);
-        this.boids.forEach(b => b.applyBoid(this.boids))
-        this.boids.forEach(b => b.update(this.dungen.cells))
+        // this.boids.forEach(b => b.applyBoid(this.boids))
+        // this.boids.forEach(b => b.update(this.dungen.cells))
 
 
         // this.dungen.update();
@@ -48,7 +48,7 @@ class World {
         this.camera.apply(ctx);
         this.dungen.draw(ctx);
         this.snake.draw(ctx);
-        this.boids.forEach(b => b.draw(ctx))
+        // this.boids.forEach(b => b.draw(ctx))
 
         this.camera.release(ctx);
     }

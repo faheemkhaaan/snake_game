@@ -7,54 +7,30 @@ class SnakeSkeleton {
 
         this.build(segmentCount, spacing)
     }
+    getSegmentThickness(index, totalSegments) {
+        // Head (first 5 segments)
+        if (index === 0) return 14;  // Snout
+        if (index === 1) return 18;  // Head widest
+        if (index === 2) return 17;  // Head-narrowing
+        if (index === 3) return 15;  // Neck
+        if (index === 4) return 13;  // Neck
 
+        // Tail (last 8 segments)
+        const segmentsFromEnd = totalSegments - 1 - index;
+        const tailSizes = [0.2, 0.3, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13.5];
+        if (segmentsFromEnd < tailSizes.length) {
+            return tailSizes[Math.min(segmentsFromEnd, tailSizes.length - 1)] || 0.3;
+        }
 
+        // Main body
+        return 14;
+    }
 
     build(segmentCount, spacing, radiusScaler = 1.5) {
-        const radiuss = [
-            12, 15, 16, 15, 13, // Head and Neck (slight taper at index 4)
-            14, 14, 14, 14, 14, // Front body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            14, 14, 14, 14, 14, // Mid body
-            13, 13, 12, 12, 11, // Beginning of taper
-            10, 9, 8, 7, 6,     // Tail narrowing
-            5, 4, 3, 2, 1.5,    // End of tail
-            1, 0.8, 0.5, 0.2    // Tip
-        ];
-        for (let i = 0; i < radiuss.length; i++) {
-            this.points.push(new Point(new Vector(100 + (spacing * radiusScaler * i), 100), radiuss[i] * radiusScaler));
+
+        for (let i = 0; i < segmentCount; i++) {
+            const radius = this.getSegmentThickness(i, segmentCount)
+            this.points.push(new Point(new Vector(100 + (spacing * radiusScaler * i), 100), radius * radiusScaler));
         }
         for (let i = 0; i < this.points.length - 1; i++) {
             this.segments.push(new Segment(this.points[i], this.points[i + 1]));
@@ -68,7 +44,9 @@ class SnakeSkeleton {
             this.segments[i].angleAngleConstraint(this.segments[i + 1], 40)
         }
         if (cells) {
-            this.points.forEach(p => p.resolveWallPenetration(cells));
+            for (let i = 0; i < 5; i++) {
+                this.points.forEach(p => p.resolveWallPenetration(cells));
+            }
         }
     }
     update(cells) {
